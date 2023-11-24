@@ -115,7 +115,7 @@ void check()
 
     tft.fillScreen(ST77XX_BLACK);
     tft.setCursor(0, 0);
-    tft.println("Waterniveau:");
+    tft.println("Waterniveau: ");
 
     tft.print(trig_section * 5);
     tft.println(" millimeter");
