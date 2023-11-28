@@ -2,8 +2,16 @@
 #include <Adafruit_ST7735.h>
 #include <Adafruit_ST7789.h>
 #include <Adafruit_ST77xx.h>
+#include <WiFiS3.h>
+#include "env.h"
+#include <ArduinoMqttClient.h>
 
 #define SERIAL Serial
+
+WiFiClient Groep4;
+MqttClient MqttClient(Groep4);
+
+
 
 #define TFT_CS        10
 #define TFT_RST        9 // Or set to -1 and connect to Arduino RESET pin
@@ -25,7 +33,8 @@ void getHigh12SectionValue(void)
   Wire.requestFrom(ATTINY1_HIGH_ADDR, 12);
   while (12 != Wire.available());
 
-  for (int i = 0; i < 12; i++) {
+  for (int i = 0; i < 12; i++) 
+  {
     high_data[i] = Wire.read();
   }
   delay(10);
@@ -124,7 +133,26 @@ void check()
   }
 }
 
-void setup() {
+void setup() 
+{
+  while (WiFi.begin(ssid, pass) != WL_CONNECTED) // BEGINT CONNECTIE MET WIFI
+  {
+    delay(5000); // ELK 5 SECONDE
+  }
+
+  MqttClient.setUsernamePassword(MQTTUsername, MQTTPassword);
+  
+   
+  bool MQTTconnected = false;
+  while (!MQTTconnected) 
+  {
+    if (!MqttClient.connect(MQTTURL, MQTTPort))
+    delay(1000);
+  else
+  MQTTconnected = true;
+  }
+
+
   SERIAL.begin(115200);
   Wire.begin();
 
