@@ -2,13 +2,14 @@
 #include <Adafruit_ST7735.h>
 #include <Adafruit_ST7789.h>
 #include <Adafruit_ST77xx.h>
+#include <WiFiS3.h>
+#include "env.h"
+#include <ArduinoMqttClient.h>
 
 #define SERIAL Serial
 
-
 WiFiClient Groep4;
-MqttClient MqttClient(Groep4);
-
+MqttClient mqtt(Groep4);
 
 #define TFT_CS        10
 #define TFT_RST        9 // Of instellen op -1 en verbinden met de Arduino RESET-pin
@@ -22,6 +23,9 @@ unsigned char high_data[12] = {0};
 #define THRESHOLD      100
 #define ATTINY1_HIGH_ADDR   0x78
 #define ATTINY2_LOW_ADDR   0x77
+
+const char mytopic[] = "onni/waterniveau"; // Mijn topic die het naar broker stuurt
+const char lars_topic[] = ""; // Topic van broker
 
 // TFT display initialisatie
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
@@ -151,11 +155,34 @@ void check()
     tft.print(trig_section * 5);
     tft.println(" millimeter");
 
+    mqtt.beginMessage(mytopic, true, 0); // pushed mijn data naar de broker, true = dat de broker de laatste waarde onthoud met waarde 0.
+    mqtt.print(trig_section * 5);
+    mqtt.endMessage();
+
     delay(1000); // Wachten voor volgende update
   }
 }
 
-void setup() {
+void setup() 
+{
+  
+  while (WiFi.begin(ssid, pass) != WL_CONNECTED) // BEGINT CONNECTIE MET WIFI
+  {
+    delay(5000); // ELK 5 SECONDE
+    SERIAL.print(".");
+  }
+
+  mqtt.setUsernamePassword(MQTTUsername, MQTTPassword);
+  
+   
+  bool MQTTconnected = false;
+  while (!MQTTconnected) 
+  {
+    if (!mqtt.connect(MQTTURL, MQTTPort))
+      delay(1000);
+    else
+      MQTTconnected = true;
+  }
   SERIAL.begin(115200);
   Wire.begin();
 
@@ -163,9 +190,14 @@ void setup() {
   tft.setRotation(-45); // Rotatie van het scherm
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
+
+  
 }
 
 void loop()
 {
   check();
+
+  mqtt.poll(); // Die haalt nieuwe berichten van de broker op om de 2 seconden.
+  check(); // checkt het watersensor niveau.
 } // Einde van de loop
