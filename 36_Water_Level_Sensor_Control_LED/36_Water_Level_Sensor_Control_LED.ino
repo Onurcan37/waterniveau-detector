@@ -5,6 +5,11 @@
 
 #define SERIAL Serial
 
+
+WiFiClient Groep4;
+MqttClient MqttClient(Groep4);
+
+
 #define TFT_CS        10
 #define TFT_RST        9 // Of instellen op -1 en verbinden met de Arduino RESET-pin
 #define TFT_DC         8
