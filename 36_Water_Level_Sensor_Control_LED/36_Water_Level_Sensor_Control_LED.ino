@@ -12,7 +12,6 @@ WiFiClient Groep4;
 MqttClient MqttClient(Groep4);
 
 
-
 #define TFT_CS        10
 #define TFT_RST        9 // Or set to -1 and connect to Arduino RESET pin
 #define TFT_DC         8
