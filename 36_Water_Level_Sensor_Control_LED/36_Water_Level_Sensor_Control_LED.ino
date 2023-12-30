@@ -2,13 +2,12 @@
 #include <Adafruit_ST7735.h>
 #include <Adafruit_ST7789.h>
 #include <Adafruit_ST77xx.h>
-
-#define SERIAL Serial
-
+#include <WiFiS3.h>
+#include "env.h"
+#include <ArduinoMqttClient.h>
 
 WiFiClient Groep4;
-MqttClient MqttClient(Groep4);
-
+MqttClient mqtt(Groep4);
 
 #define TFT_CS        10
 #define TFT_RST        9 // Of instellen op -1 en verbinden met de Arduino RESET-pin
@@ -22,6 +21,10 @@ unsigned char high_data[12] = {0};
 #define THRESHOLD      100
 #define ATTINY1_HIGH_ADDR   0x78
 #define ATTINY2_LOW_ADDR   0x77
+
+const char mytopic[] = "onni/waterniveau"; // Mijn topic die het naar broker stuurt
+const char subscribeTopic[] = "lars/deur/status"; // Topic van broker
+String message;
 
 // TFT display initialisatie
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
@@ -66,8 +69,6 @@ void check()
   int low_count = 0;
   int high_count = 0;
   
-  while (1)
-  {
     uint32_t touch_val = 0;
     uint8_t trig_section = 0;
     low_count = 0;
@@ -151,21 +152,79 @@ void check()
     tft.print(trig_section * 5);
     tft.println(" millimeter");
 
+    tft.setCursor(0, 40);
+    tft.println("Deur status: " + message); 
+  
+    mqtt.beginMessage(mytopic, true, 0); // pushed mijn data naar de broker, true = dat de broker de laatste waarde onthoud met waarde 0.
+    mqtt.endMessage();
+
     delay(1000); // Wachten voor volgende update
-  }
 }
 
-void setup() {
-  SERIAL.begin(115200);
+void onMqttMessage(int messageSize) {
+  Serial.print("Received a message with topic '");
+  Serial.println(mqtt.messageTopic());
+  String messages = "";
+  while (mqtt.available()) {
+    messages.concat((char)mqtt.read());
+    }
+    Serial.println(message);
+
+    
+     if (messages == "0" || messages == "1"){
+    message = messages;
+    
+    if (messages == "0"){
+    message = "Dicht";
+    }
+    else{
+    message = "Open";
+    }
+
+    }
+    
+
+}
+
+
+void setup() 
+{
+
+  Serial.begin(9600);
+  
+  while (WiFi.begin(ssid, pass) != WL_CONNECTED) // BEGINT CONNECTIE MET WIFI
+  {
+    delay(5000); // ELK 5 SECONDE
+    Serial.print(".");
+  }
+
+  mqtt.setUsernamePassword(MQTTUsername, MQTTPassword);
+  
+   
+  bool MQTTconnected = false;
+  while (!MQTTconnected) 
+  {
+    if (!mqtt.connect(MQTTURL, MQTTPort))
+      delay(1000);
+    else
+      MQTTconnected = true;
+  }
+
+  mqtt.onMessage(onMqttMessage);
+  mqtt.subscribe(subscribeTopic);
+
   Wire.begin();
 
   tft.initR(INITR_BLACKTAB);  // Initialiseren van ST7735S chip, black tab
   tft.setRotation(-45); // Rotatie van het scherm
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
+
+  
 }
 
 void loop()
 {
-  check();
+  mqtt.poll(); // Die haalt nieuwe berichten van de broker op om de 2 seconden.
+  check(); // checkt het watersensor niveau.
 } // Einde van de loop
