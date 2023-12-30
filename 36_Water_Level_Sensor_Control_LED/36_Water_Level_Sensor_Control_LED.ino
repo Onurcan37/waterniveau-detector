@@ -24,6 +24,7 @@ unsigned char high_data[12] = {0};
 
 const char mytopic[] = "onni/waterniveau"; // Mijn topic die het naar broker stuurt
 const char subscribeTopic[] = "lars/deur/status"; // Topic van broker
+String message;
 
 // TFT display initialisatie
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
@@ -151,8 +152,10 @@ void check()
     tft.print(trig_section * 5);
     tft.println(" millimeter");
 
+    tft.setCursor(0, 40);
+    tft.println("Deur status: " + message); 
+  
     mqtt.beginMessage(mytopic, true, 0); // pushed mijn data naar de broker, true = dat de broker de laatste waarde onthoud met waarde 0.
-    mqtt.print(trig_section * 5);
     mqtt.endMessage();
 
     delay(1000); // Wachten voor volgende update
@@ -161,11 +164,26 @@ void check()
 void onMqttMessage(int messageSize) {
   Serial.print("Received a message with topic '");
   Serial.println(mqtt.messageTopic());
-  String message = "";
+  String messages = "";
   while (mqtt.available()) {
-    message.concat((char)mqtt.read());
+    messages.concat((char)mqtt.read());
     }
     Serial.println(message);
+
+    
+     if (messages == "0" || messages == "1"){
+    message = messages;
+    
+    if (messages == "0"){
+    message = "Dicht";
+    }
+    else{
+    message = "Open";
+    }
+
+    }
+    
+
 }
 
 
